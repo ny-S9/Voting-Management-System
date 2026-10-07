@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Verify it's you{% endblock %}
+{% block shell %}
+<div class="auth">
+  <section class="vis">
+    <a class="brand" href="/"><img src="{{ url_for('static', filename='logo.svg') }}" alt=""><div><b>Zetech Ballot</b><span>Electronic voting portal</span></div></a>
+    <div>
+      <h1>Quick check: is it really you?</h1>
+      <p>We sent a one-time code to your school email so nobody else can vote in your name.</p>
+    </div>
+    <img class="photo" src="{{ url_for('static', filename='img/v2.jpg') }}" alt="Students holding phones around a table with a ballot box">
+  </section>
+  <section class="side">
+    <div class="box">
+      <h2 style="font-size:1.8rem">Enter your code</h2>
+      <p class="muted">Check the inbox of <b>{{ email_hint }}</b>. Look in spam if you don't see it.</p>
+      {% for c, m in get_flashed_messages(with_categories=true) %}<div class="flash {{ c }}" role="status">{{ m }}</div>{% endfor %}
+      <form method="post" autocomplete="off">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="step" value="verify">
+        <label for="code">6-digit code</label>
+        <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" required autofocus
+               autocomplete="one-time-code" placeholder="123456" style="font-size:1.6rem;letter-spacing:.35em;text-align:center">
+        <button class="btn block" type="submit">Verify and log in</button>
+      </form>
+      <form method="post" style="margin-top:12px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="step" value="resend">
+        <button class="btn block ghost" type="submit">Send a new code</button>
+      </form>
+      <p class="center small muted" style="margin-top:18px"><a href="/logout">Back to login</a> · The code expires in 5 minutes.</p>
+    </div>
+  </section>
+</div>
+{% endblock %}

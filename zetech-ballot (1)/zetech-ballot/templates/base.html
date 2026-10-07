@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{% endblock %} · Zetech Ballot</title>
+<link rel="icon" href="{{ url_for('static', filename='logo.svg') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% block shell %}
+<header class="top">
+  <a class="brand" href="/"><img src="{{ url_for('static', filename='logo.svg') }}" alt=""><div><b>Zetech Ballot</b><span>Student elections</span></div></a>
+  <nav class="nav" aria-label="Main">
+    {% if role == 'admin' %}
+      <a href="/admin" class="{{ 'on' if request.path.startswith('/admin') }}">Control room</a>
+    {% else %}
+      <a href="/dashboard" class="{{ 'on' if request.path == '/dashboard' }}">Home</a>
+      <a href="/ballot" class="{{ 'on' if request.path == '/ballot' }}">Ballot</a>
+      <a href="/apply" class="{{ 'on' if request.path == '/apply' }}">Run for office</a>
+    {% endif %}
+    <a href="/results" class="{{ 'on' if request.path == '/results' }}">Live results</a>
+  </nav>
+  <div class="chip"><span class="avatar">{{ user_name|initials }}</span><span>{{ user_name }}</span><a class="btn sm red" href="/logout">Log out</a></div>
+</header>
+<div class="flashes">{% for c, m in get_flashed_messages(with_categories=true) %}<div class="flash {{ c }}" role="status">{{ m }}</div>{% endfor %}</div>
+<main>{% block body %}{% endblock %}</main>
+<footer>Zetech University · Electronic Ballot System · One student, one vote <b>♥</b></footer>
+{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

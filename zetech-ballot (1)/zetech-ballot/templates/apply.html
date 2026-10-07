@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Run for office{% endblock %}
+{% block body %}
+{% set locked = mine and mine.status == 'approved' %}
+<div class="head"><div><h1>Run for office</h1>
+<p class="muted">Send everything the Dean's office needs, online. Your details are saved straight to the election database.</p></div>
+{% if mine %}<span class="pill {{ 'ok' if mine.status == 'approved' else 'bad' if mine.status == 'rejected' else 'warn' }}">{{ mine.status|capitalize }}: {{ mine.position_name }}</span>{% endif %}</div>
+
+{% if election.status == 'open' %}<div class="flash err">Voting is open, so applications are closed.</div>{% endif %}
+{% if locked %}<div class="flash ok">You're approved and on the ballot for {{ mine.position_name }}. Your application is locked.</div>{% endif %}
+
+<div class="grid g2">
+<section class="card">
+  <h2>{{ 'Your application' if mine else 'New application' }}</h2>
+  <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% set sel = (form.position_id if form else (mine.position_id if mine else '')) %}
+    <label for="pos">Position</label>
+    <select id="pos" name="position_id" required {{ 'disabled' if locked }}>
+      <option value="" disabled {{ 'selected' if not sel }}>Choose a position</option>
+      {% for p in positions %}<option value="{{ p.position_id }}" {{ 'selected' if sel|string == p.position_id|string }}>{{ p.position_name }}</option>{% endfor %}
+    </select>
+    <label for="man">Manifesto</label>
+    <textarea id="man" name="manifesto" maxlength="1500" required {{ 'disabled' if locked }} placeholder="What will you change? Why should students trust you?">{{ form.manifesto if form else (mine.manifesto if mine else '') }}</textarea>
+    <label for="photo">Your photo</label>
+    <input id="photo" type="file" name="photo" accept=".png,.jpg,.jpeg,.webp" {{ 'disabled' if locked }}>
+    <p class="hint">{{ 'Already uploaded. Choose a file only to replace it.' if mine and mine.photo_path else 'A clear face photo. PNG, JPG or WEBP.' }}</p>
+    <label for="res">Academic results</label>
+    <input id="res" type="file" name="results" accept=".pdf,.png,.jpg,.jpeg" {{ 'disabled' if locked }}>
+    <p class="hint">{{ 'Already uploaded. Choose a file only to replace it.' if mine and mine.results_path else 'Your latest results slip. PDF or image.' }}</p>
+    <label class="check"><input type="checkbox" name="fee" value="1" {{ 'checked' if (form and form.fee) or (mine and mine.fee_compliance) }} {{ 'disabled' if locked }}>
+      <span>My school fees are cleared. I understand the Dean's office will verify this.</span></label>
+    {% if not locked %}<button class="btn red" type="submit" {{ 'disabled' if election.status == 'open' }}>{{ 'Save changes' if mine else 'Submit application' }}</button>{% endif %}
+  </form>
+</section>
+<section class="card">
+  <h2>How it works</h2>
+  <ol style="padding-left:20px;margin:0">
+    <li><b>Apply.</b> Fill in the form and upload your photo and results.</li>
+    <li><b>Review.</b> The Dean's office checks your documents and fee status.</li>
+    <li><b>On the ballot.</b> Once approved, students see your photo and manifesto.</li>
+    <li><b>Watch the count.</b> Follow your votes live on the results page.</li>
+  </ol>
+  <p class="hint" style="margin-top:16px">You can run for one position at a time. If you're rejected, you can fix your details and apply again.</p>
+  {% if mine and mine.results_path %}<p><a href="/uploads/{{ mine.results_path }}" target="_blank" rel="noopener">View my uploaded results</a></p>{% endif %}
+  {% if mine and mine.photo_path %}<img src="/uploads/{{ mine.photo_path }}" alt="Your uploaded photo" style="width:150px;height:150px;object-fit:cover;border-radius:24px;border:4px solid var(--sky)">{% endif %}
+</section>
+</div>
+{% endblock %}

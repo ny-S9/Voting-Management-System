@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Ballot{% endblock %}
+{% block body %}
+{% set st = election.status %}
+<div class="head">
+  <div><h1>Your ballot</h1><p class="muted">{{ election.title }}. One vote per position, and votes can't be changed.</p></div>
+  <span class="pill {{ 'ok live' if st == 'open' else 'warn' if st == 'paused' else 'bad' }}">{{ 'Open' if st == 'open' else 'Paused' if st == 'paused' else 'Closed' }}</span>
+</div>
+{% if st != 'open' %}<div class="flash">{{ 'Voting is paused. You can read the manifestos, but you can\'t vote right now.' if st == 'paused' else 'Voting is closed. You can read the manifestos below.' }}</div>{% endif %}
+
+{% for p in positions %}
+<section class="pos card">
+  <div class="pos-head">
+    <h2 style="margin:0">{{ p.position_name }}</h2>
+    {% if p.position_id in mine %}<span class="pill ok">Vote recorded</span>{% endif %}
+  </div>
+  {% set list = cands.get(p.position_id, []) %}
+  {% if not list %}
+    <div class="empty">No approved candidates for this position yet.</div>
+  {% elif p.position_id in mine %}
+    <div class="cands">
+      {% for c in list %}
+      <div class="cand done {{ 'mine' if c.candidate_id == mine[p.position_id] }}">
+        <div class="who"><span class="avatar lg">{% if c.photo_path %}<img src="/uploads/{{ c.photo_path }}" alt="">{% else %}{{ c.full_name|initials }}{% endif %}</span>
+          <div><b>{{ c.full_name }}</b><span>{{ 'Your pick' if c.candidate_id == mine[p.position_id] else c.admission_number }}</span></div></div>
+        <p class="man">{{ c.manifesto }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <form method="post" action="/vote" class="vote-form" data-pos="{{ p.position_name }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="cands">
+        {% for c in list %}
+        <label class="cand">
+          <input type="radio" name="candidate_id" value="{{ c.candidate_id }}" required {{ 'disabled' if st != 'open' }}>
+          <span class="tick"></span>
+          <span class="who"><span class="avatar lg">{% if c.photo_path %}<img src="/uploads/{{ c.photo_path }}" alt="">{% else %}{{ c.full_name|initials }}{% endif %}</span>
+            <span><b>{{ c.full_name }}</b><span>{{ c.admission_number }}</span></span></span>
+          <p class="man">{{ c.manifesto }}</p>
+        </label>
+        {% endfor %}
+      </div>
+      <p style="margin:18px 0 0"><button class="btn red" type="submit" {{ 'disabled' if st != 'open' }}>Cast my vote for {{ p.position_name }}</button></p>
+    </form>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.vote-form').forEach(f=>f.addEventListener('submit',e=>{
+  const pick=f.querySelector('input:checked');
+  const name=pick?pick.closest('.cand').querySelector('b').textContent:'';
+  if(!confirm('Vote for '+name+' as '+f.dataset.pos+'? You cannot change it afterwards.'))e.preventDefault();
+}));
+</script>
+{% endblock %}

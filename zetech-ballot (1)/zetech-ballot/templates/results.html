@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Live results{% endblock %}
+{% block body %}
+<div class="head">
+  <div><h1>Live results</h1><p class="muted" id="title">Loading…</p></div>
+  <div><span class="pill" id="status">…</span></div>
+</div>
+<div class="stats">
+  <div class="stat"><b id="tp">–</b><span id="tt">Turnout</span></div>
+  <div class="stat red"><b id="tv">–</b><span>Votes cast in total</span></div>
+  <div class="stat"><b id="up" style="font-size:1.3rem;padding-top:8px">–</b><span>Refreshes every 5 seconds</span></div>
+</div>
+<div id="out"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const $=id=>document.getElementById(id);
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e}
+function ini(n){const p=n.split(' ');return(p[0][0]+(p.length>1?p[p.length-1][0]:'')).toUpperCase()}
+function render(d){
+  $('title').textContent=d.election.title;
+  const s=$('status'),m={open:['Voting open','ok live'],paused:['Paused','warn'],closed:['Closed','bad']}[d.election.status];
+  s.textContent=m[0];s.className='pill '+m[1];
+  $('tp').textContent=d.turnout.pct+'%';$('tt').textContent='Turnout: '+d.turnout.voters+' of '+d.turnout.total+' students';
+  $('tv').textContent=d.total_votes;
+  $('up').textContent='Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const out=$('out');out.replaceChildren();
+  d.positions.forEach(p=>{
+    const card=el('section','card res');
+    const h=el('div','pos-head');h.append(el('h2','',p.name),el('span','pill',p.total+(p.total===1?' vote':' votes')));
+    card.append(h);
+    if(!p.candidates.length)card.append(el('div','empty','No approved candidates yet.'));
+    const top=p.candidates.length?p.candidates[0].votes:0;
+    p.candidates.forEach(c=>{
+      const row=el('div','bar-row'),av=el('span','avatar sm');
+      if(c.photo){const i=document.createElement('img');i.src='/uploads/'+encodeURIComponent(c.photo);i.alt='';av.append(i)}else av.textContent=ini(c.name);
+      const body=el('div'),t=el('div','bar-top');t.append(el('span','',c.name),el('span','',c.votes+' · '+c.pct+'%'));
+      const tr=el('div','track'),f=el('div','fill'+(top>0&&c.votes===top?' lead':''));f.style.width=c.pct+'%';tr.append(f);
+      body.append(t,tr);row.append(av,body);card.append(row);
+    });
+    out.append(card);
+  });
+}
+async function load(){try{const r=await fetch('/api/results');if(r.status===200){render(await r.json())}else if(r.redirected){location.href='/login'}}catch(e){}}
+load();setInterval(load,5000);
+</script>
+{% endblock %}

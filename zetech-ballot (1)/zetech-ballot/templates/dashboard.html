@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+{% block body %}
+{% set st = election.status %}
+<section class="hero">
+  <div class="txt">
+    <span class="pill {{ 'ok live' if st == 'open' else 'warn' if st == 'paused' else 'bad' }}">{{ 'Voting is open' if st == 'open' else 'Voting is paused' if st == 'paused' else 'Voting is closed' }}</span>
+    <h1 style="margin-top:14px">Hi {{ user_name.split()[0] }}, {{ 'your vote is waiting!' if st == 'open' else 'welcome in.' }}</h1>
+    <p>{{ election.title }}.
+      {% if st == 'open' %}Read each manifesto, then cast one vote per position.
+      {% elif st == 'paused' %}The Dean's office paused voting. Check back soon.
+      {% else %}Voting isn't open yet. You can apply to run, or browse the results page.{% endif %}</p>
+    <div class="row">
+      {% if st == 'open' %}<a class="btn red" href="/ballot">Go to my ballot</a>{% else %}<a class="btn red" href="/apply">Run for office</a>{% endif %}
+      <a class="btn ghost" href="/results">See live results</a>
+    </div>
+  </div>
+  <div class="pic"><img src="{{ url_for('static', filename='img/v1.jpg') }}" alt="A hand holding a phone with a ballot box and a Vote button"></div>
+</section>
+
+<div class="stats">
+  <div class="stat"><b>{{ mine|length }}/{{ positions|length }}</b><span>Positions you voted for</span></div>
+  <div class="stat red"><b>{{ n_cands }}</b><span>Candidates on the ballot</span></div>
+  <div class="stat"><b>{{ t.pct }}%</b><span>Turnout so far ({{ t.voters }} of {{ t.total }})</span></div>
+  <div class="stat"><b style="font-size:1.35rem;padding-top:8px">{{ app_row.status|capitalize if app_row else 'Not applied' }}</b><span>Your candidate application</span></div>
+</div>
+
+<div class="grid g2">
+  <section class="card">
+    <h2>Your ballot</h2>
+    <p class="muted small">Each position needs its own vote.</p>
+    {% for p in positions %}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)">
+      <b>{{ p.position_name }}</b>
+      {% if p.position_id in mine %}<span class="pill ok">Voted for {{ mine[p.position_id] }}</span>
+      {% else %}<span class="pill warn">Not yet</span>{% endif %}
+    </div>
+    {% endfor %}
+    {% if st == 'open' %}<p style="margin-top:18px"><a class="btn" href="/ballot">Open ballot</a></p>{% endif %}
+  </section>
+  <section class="card">
+    <h2>Run for office</h2>
+    {% if app_row %}
+      <p>You applied for <b>{{ app_row.position_name }}</b>.</p>
+      <p><span class="pill {{ 'ok' if app_row.status == 'approved' else 'bad' if app_row.status == 'rejected' else 'warn' }}">{{ app_row.status|capitalize }}</span></p>
+      <p class="muted small">{{ 'You are on the ballot. Watch your votes on the results page.' if app_row.status == 'approved' else 'You can fix your details and send it again.' if app_row.status == 'rejected' else 'The Dean\'s office is reviewing your photo, results and fee status.' }}</p>
+      <a class="btn ghost" href="/apply">{{ 'View application' if app_row.status == 'approved' else 'Edit application' }}</a>
+    {% else %}
+      <p>Want to lead? Send your photo, manifesto, results and fee status online. No paper forms.</p>
+      <a class="btn" href="/apply">Start my application</a>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

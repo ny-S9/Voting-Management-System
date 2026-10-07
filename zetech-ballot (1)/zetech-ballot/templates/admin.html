@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Control room{% endblock %}
+{% block body %}
+{% set st = election.status %}
+<div class="head"><div><h1>Control room</h1><p class="muted">Dean's office · {{ election.title }}</p></div>
+  <span class="pill {{ 'ok live' if st == 'open' else 'warn' if st == 'paused' else 'bad' }}">{{ 'Voting open' if st == 'open' else 'Paused' if st == 'paused' else 'Closed' }}</span></div>
+<nav class="subnav"><a href="#election">Election</a><a href="#candidates">Candidates</a><a href="#voters">Voters</a><a href="#audit">Audit log</a><a href="#settings">Settings</a></nav>
+
+<div class="stats">
+  <div class="stat"><b>{{ stats.t.pct }}%</b><span>Turnout ({{ stats.t.voters }} of {{ stats.t.total }})</span></div>
+  <div class="stat red"><b>{{ stats.votes }}</b><span>Votes cast</span></div>
+  <div class="stat"><b>{{ stats.pending }}</b><span>Applications waiting</span></div>
+  <div class="stat"><b>{{ stats.approved }}</b><span>Candidates approved</span></div>
+  <div class="stat"><b>{{ stats.activated }}/{{ stats.voters }}</b><span>Students activated</span></div>
+</div>
+
+<section class="card" id="election">
+  <h2>Election control</h2>
+  <p class="muted">Opening the election lets students vote and stops new applications.</p>
+  <div class="ctrl">
+    <form method="post" action="/admin/election"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="open"><button class="btn" {{ 'disabled' if st == 'open' }}>{{ 'Resume voting' if st == 'paused' else 'Start election' }}</button></form>
+    <form method="post" action="/admin/election"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="pause"><button class="btn ghost" {{ 'disabled' if st != 'open' }}>Pause</button></form>
+    <form method="post" action="/admin/election" onsubmit="return confirm('Close the election? Students will no longer be able to vote.')"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="close"><button class="btn red" {{ 'disabled' if st == 'closed' }}>Stop election</button></form>
+    <a class="btn ghost" href="/admin/report.csv">Download report (CSV)</a>
+    <a class="btn ghost" href="/results">Open live results</a>
+  </div>
+  <details style="margin-top:20px"><summary>Start a new election</summary>
+    <form method="post" action="/admin/election" class="inline" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="new">
+      <div><label for="nt">Title</label><input id="nt" name="title" type="text" placeholder="Zetech University Student Elections 2027" required></div>
+      <button class="btn">Create election</button></form>
+    <p class="hint" style="margin-top:10px">The old election and its votes stay in the database. The new one starts at zero.</p>
+  </details>
+</section>
+
+<section class="card" id="candidates">
+  <h2>Candidate applications</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Candidate</th><th>Position</th><th>Manifesto</th><th>Documents</th><th>Fees</th><th>Status</th><th>Decision</th></tr></thead>
+    <tbody>
+    {% for c in cands %}
+    <tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><span class="avatar">{% if c.photo_path %}<img src="/uploads/{{ c.photo_path }}" alt="">{% else %}{{ c.full_name|initials }}{% endif %}</span>
+        <div><b>{{ c.full_name }}</b><div class="small muted">{{ c.admission_number }}</div></div></div></td>
+      <td>{{ c.position_name }}</td>
+      <td style="max-width:260px"><details><summary>Read</summary><p class="small" style="margin-top:6px">{{ c.manifesto }}</p></details></td>
+      <td>{% if c.photo_path %}<a href="/uploads/{{ c.photo_path }}" target="_blank" rel="noopener">Photo</a>{% endif %}
+          {% if c.results_path %} · <a href="/uploads/{{ c.results_path }}" target="_blank" rel="noopener">Results</a>{% endif %}</td>
+      <td><form method="post" action="/admin/candidate/{{ c.candidate_id }}/fee"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn sm ghost" title="Toggle fee verification">{{ 'Verified' if c.fee_compliance else 'Not verified' }}</button></form></td>
+      <td><span class="pill {{ 'ok' if c.status == 'approved' else 'bad' if c.status == 'rejected' else 'warn' }}">{{ c.status|capitalize }}</span></td>
+      <td><div class="acts">
+        <form method="post" action="/admin/candidate/{{ c.candidate_id }}/approve"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn sm" {{ 'disabled' if c.status == 'approved' }}>Approve</button></form>
+        <form method="post" action="/admin/candidate/{{ c.candidate_id }}/reject"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn sm red" {{ 'disabled' if c.status == 'rejected' }}>Reject</button></form>
+      </div></td>
+    </tr>
+    {% else %}<tr><td colspan="7" class="muted center">No applications yet. They'll appear here as students apply.</td></tr>{% endfor %}
+    </tbody></table></div>
+</section>
+
+<section class="card" id="voters">
+  <h2>Voters</h2>
+  <details style="margin-bottom:16px"><summary>Add a student</summary>
+    <form method="post" action="/admin/student" class="inline" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <div><label>Admission number</label><input name="admission_number" type="text" required placeholder="DIT-03-0094/2026"></div>
+      <div><label>Full name</label><input name="full_name" type="text" required></div>
+      <div><label>Email</label><input name="email" type="email" required></div>
+      <div><label>Phone</label><input name="phone_number" type="tel" required></div>
+      <button class="btn">Add student</button></form></details>
+  <div class="tw"><table>
+    <thead><tr><th>Admission no.</th><th>Name</th><th>Email</th><th>Phone</th><th>Account</th><th>Voted</th><th></th></tr></thead>
+    <tbody>{% for v in voters %}
+    <tr><td>{{ v.admission_number }}</td><td><b>{{ v.full_name }}</b></td><td>{{ v.email }}</td><td>{{ v.phone_number }}</td>
+      <td><span class="pill {{ 'ok' if v.password else 'warn' }}">{{ 'Active' if v.password else 'Not activated' }}</span></td>
+      <td>{{ v.n_votes }}/{{ n_positions }}</td>
+      <td><form method="post" action="/admin/student/{{ v.student_id }}/reset" onsubmit="return confirm('Reset this student\'s password? They will need to activate again.')"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn sm ghost">Reset password</button></form></td></tr>
+    {% endfor %}</tbody></table></div>
+</section>
+
+<section class="card" id="audit">
+  <h2>Audit log</h2>
+  <p class="muted small">The latest 80 actions, newest first. Times are East Africa Time. Votes are logged by position only, never by candidate.</p>
+  <div class="tw"><table>
+    <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Details</th></tr></thead>
+    <tbody>{% for a in audit %}<tr><td style="white-space:nowrap">{{ a.logged_at|eat }}</td><td>{{ a.who or '-' }} <span class="small muted">{{ a.actor_role or '' }}</span></td><td><b>{{ a.action }}</b></td><td class="muted">{{ a.details or '' }}</td></tr>
+    {% else %}<tr><td colspan="4" class="muted center">Nothing logged yet.</td></tr>{% endfor %}</tbody></table></div>
+</section>
+
+<section class="card" id="settings">
+  <h2>Change my password</h2>
+  <form method="post" action="/admin/password" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="o">Current password</label><input id="o" name="old" type="password" required autocomplete="current-password"></div>
+    <div><label for="n">New password</label><input id="n" name="new" type="password" minlength="6" required autocomplete="new-password"></div>
+    <button class="btn">Change password</button></form>
+</section>
+{% endblock %}
